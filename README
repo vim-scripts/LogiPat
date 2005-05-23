@@ -1,0 +1,24 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=1290
+
+LogiPat takes Boolean logic arguments and produces a regular expression which is used to search for a line satisfying the logic.  The search register (@/) is initialized with the resulting regular expression, so repeating such searches is as easy as repeating any search.  A series of examples follows:
+
+:LogiPat "abc"
+		will search for lines containing the string "abc"
+
+:LogiPat !"abc"
+		will search for lines which don't contain the string "abc"
+
+:LogiPat "abc"|"def"
+		will search for lines which contain either the string "abc" or the string "def"
+
+:LogiPat !("abc"|"def")
+		will search for lines which don't contain either of the strings "abc" or "def"
+
+:LogiPat "abc"&"def"
+		will search for lines which contain both of the strings "abc" and "def"
+
+:let pat= LogiPat('!"abc"')
+		will return the regular expression which will match all lines not containing "abc".  The double quotes are needed to pass normal patterns to LogiPat, and differentiate such patterns from boolean logic operators.
+
+(alpha/beta version available at http://mysite.verizon.net/astronaut/vim/index.html#LOGIPAT)
+
