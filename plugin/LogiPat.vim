@@ -1,8 +1,18 @@
 " LogiPat:
 "   Author:  Charles E. Campbell, Jr.
-"   Date:    May 23, 2005
-"   Version: 1
+"   Date:    Sep 01, 2005
+"   Version: 2
 "   Purpose: to do Boolean-logic based regular expression pattern matching
+" Copyright:    Copyright (C) 1999-2005 Charles E. Campbell, Jr. {{{1
+"               Permission is hereby granted to use and distribute this code,
+"               with or without modifications, provided that this copyright
+"               notice is copied with it. Like anything else that's free,
+"               LogiPat.vim is provided *as is* and comes with no warranty
+"               of any kind, either expressed or implied. By using this
+"               plugin, you agree that in no event will the copyright
+"               holder be liable for any damages resulting from the use
+"               of this software.
+"
 "   Usage: {{{1
 "       :LogiPat ...
 "
@@ -12,35 +22,33 @@
 "            |  logical or
 "            &  logical and
 "            "..pattern.."
-"  Example: {{{1
+"	Example: {{{1
 "		:LogiPat !("january"|"february")
 "		  would match all strings not containing the strings january
 "		  or february
+"	GetLatestVimScripts: 1290 1 :AutoInstall: LogiPat.vim
 "
-" Luke 1:31-33
-"		  Behold, you will conceive in your womb, and bring forth a son,
-"		  and will call his name Jesus. He will be great, and will be
-"		  called the Son of the Most High. The Lord God will give him the
-"		  throne of his father, David, and he will reign over the house of
-"		  Jacob forever. There will be no end to his kingdom.
-"
-" GetLatestVimScripts: 1290 1 :AutoInstall: LogiPat.vim
+"  Behold, you will conceive in your womb, and bring forth a son, {{{1
+"  and will call his name Jesus. He will be great, and will be
+"  called the Son of the Most High. The Lord God will give him the
+"  throne of his father, David, and he will reign over the house of
+"  Jacob forever. There will be no end to his kingdom. (Luke 1:31-33 WEB)
 
 " ---------------------------------------------------------------------
 " Load Once: {{{1
 if &cp || exists("loaded_logipat")
  finish
 endif
-let g:loaded_LogiPat = "v1"
+let g:loaded_LogiPat = "v2"
 let s:keepcpo        = &cpo
 set cpo&vim
 
 " ---------------------------------------------------------------------
 " Public Interface: {{{1
-com!         -nargs=* LogiPat      call   LogiPat(<q-args>,1)
-silent! com  -nargs=* LP           call   LogiPat(<q-args>,1)
-com!         -nargs=+ LogiPatFlags let  s:LogiPatFlags=<args>
-silent! com! -nargs=+ LPF          let  s:LogiPatFlags=<args>
+com!        -nargs=* LogiPat      call   LogiPat(<q-args>,1)
+silent! com -nargs=* LP           call   LogiPat(<q-args>,1)
+com!        -nargs=+ LogiPatFlags let  s:LogiPatFlags="<args>"
+silent! com -nargs=+ LPF          let  s:LogiPatFlags="<args>"
 
 " =====================================================================
 " Functions: {{{1
@@ -116,8 +124,8 @@ fun! LogiPat(pat,...)
   " perform the indicated search
   if dosearch
    if exists("s:LogiPatFlags")
-"  call Decho("search(result<".result."> LogiPatFlags<".LogiPatFlags.">)")
-    call search(result,LogiPatFlags)
+"  call Decho("search(result<".result."> LogiPatFlags<".s:LogiPatFlags.">)")
+    call search(result,s:LogiPatFlags)
    else
 "  call Decho("search(result<".result.">)")
     call search(result)
@@ -318,18 +326,30 @@ unlet s:keepcpo
 " HelpExtractor:
 "  Author:	Charles E. Campbell, Jr.
 "  Version:	3
-"  Date:	Sep 09, 2004
+"  Date:	May 25, 2005
 "
 "  History:
+"    v3 May 25, 2005 : requires placement of code in plugin directory
+"                      cpo is standardized during extraction
 "    v2 Nov 24, 2003 : On Linux/Unix, will make a document directory
 "                      if it doesn't exist yet
 "
 " GetLatestVimScripts: 748 1 HelpExtractor.vim
 " ---------------------------------------------------------------------
 set lz
-let s:keepcpo= &cpo
+let s:HelpExtractor_keepcpo= &cpo
 set cpo&vim
-let docdir = substitute(expand("<sfile>:r").".txt",'\<plugin[/\\].*$','doc','')
+let docdir = expand("<sfile>:r").".txt"
+if docdir =~ '\<plugin\>'
+ let docdir = substitute(docdir,'\<plugin[/\\].*$','doc','')
+else
+ if has("win32")
+  echoerr expand("<sfile>:t").' should first be placed in your vimfiles\plugin directory'
+ else
+  echoerr expand("<sfile>:t").' should first be placed in your .vim/plugin directory'
+ endif
+ finish
+endif
 if !isdirectory(docdir)
  if has("win32")
   echoerr 'Please make '.docdir.' directory first'
@@ -361,16 +381,20 @@ set nolz
 unlet docdir
 unlet curfile
 "unlet docfile
-let &cpo= s:keepcpo
-unlet s:keepcpo
+let &cpo= s:HelpExtractor_keepcpo
+unlet s:HelpExtractor_keepcpo
 finish
 
 " ---------------------------------------------------------------------
 " Put the help after the HelpExtractorDoc label...
 " HelpExtractorDoc:
-*logipat.txt*	Logical Patterns				May 23, 2005
+*logipat.txt*	Logical Patterns				Aug 09, 2005
 
 Author:  Charles E. Campbell, Jr.  <NdrOchip@ScampbellPfamily.AbizM>
+Copyright: (c) 2004-2005 by Charles E. Campbell, Jr.	*logipat-copyright*
+           The VIM LICENSE applies to LogiPat.vim and LogiPat.txt
+           (see |copyright|) except use "LogiPat" instead of "Vim"
+	   No warranty, express or implied.  Use At-Your-Own-Risk.
 
 ==============================================================================
 1. Contents							*logipat*
@@ -461,6 +485,7 @@ Author:  Charles E. Campbell, Jr.  <NdrOchip@ScampbellPfamily.AbizM>
 ==============================================================================
 3. LogiPat History					*logipat-history*
 
+	v2 May 31, 2005	* LPF and LogiPatFlags commands weren't working
 	v1 May 23, 2005	* initial release
 
 ==============================================================================
