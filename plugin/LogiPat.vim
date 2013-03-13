@@ -1,12 +1,12 @@
 " LogiPat:
-"   Author:  Charles E. Campbell, Jr.
-"   Date:    Sep 01, 2005
-"   Version: 2
+"   Author:  Charles E. Campbell
+"   Date:    Mar 13, 2013
+"   Version: 3
 "   Purpose: to do Boolean-logic based regular expression pattern matching
-" Copyright:    Copyright (C) 1999-2005 Charles E. Campbell, Jr. {{{1
+" Copyright:    Copyright (C) 1999-2011 Charles E. Campbell {{{1
 "               Permission is hereby granted to use and distribute this code,
 "               with or without modifications, provided that this copyright
-"               notice is copied with it. Like anything else that's free,
+"               notice is copied with it. Like most anything else that's free,
 "               LogiPat.vim is provided *as is* and comes with no warranty
 "               of any kind, either expressed or implied. By using this
 "               plugin, you agree that in no event will the copyright
@@ -39,16 +39,18 @@
 if &cp || exists("loaded_logipat")
  finish
 endif
-let g:loaded_LogiPat = "v2"
+let g:loaded_LogiPat = "v3"
 let s:keepcpo        = &cpo
 set cpo&vim
+"DechoRemOn
 
 " ---------------------------------------------------------------------
 " Public Interface: {{{1
-com!        -nargs=* LogiPat      call   LogiPat(<q-args>,1)
-silent! com -nargs=* LP           call   LogiPat(<q-args>,1)
-com!        -nargs=+ LogiPatFlags let  s:LogiPatFlags="<args>"
-silent! com -nargs=+ LPF          let  s:LogiPatFlags="<args>"
+com!        -nargs=* LogiPat		call   LogiPat(<q-args>,1)
+silent! com -nargs=* LP				call   LogiPat(<q-args>,1)
+com!        -nargs=+ ELP			echomsg   LogiPat(<q-args>)
+com!        -nargs=+ LogiPatFlags	let  s:LogiPatFlags="<args>"
+silent! com -nargs=+ LPF			let  s:LogiPatFlags="<args>"
 
 " =====================================================================
 " Functions: {{{1
@@ -75,32 +77,33 @@ fun! LogiPat(pat,...)
 "   call Decho("expr<".expr.">")
 
    if expr =~ '^"'
-   	" push a Pattern
-   	let pat    = substitute(strpart(expr,1),'^\([^"]*\)".*$','\1','')
-   	let patlen = strlen(pat) - 1
-"	call Decho("pat<".pat."> patlen-1=".patlen)
-	if patlen > 1 && strpart(pat,patlen,1) == '\\'
-	 echoerr "LogiPat doesn't accept escaped backquotes in patterns (yet)"
-"	 call Dret("LogiPat --error--")
-     return '--error--'
-	endif
-	call s:LP_PatPush('.*'.pat.'.*')
-	let patlen = patlen+3
-	let expr   = strpart(expr,patlen)
+	" push a Pattern; accept "" as a single " in the pattern
+    let expr = substitute(expr,'^\s*"','','')
+    let pat  = substitute(expr,'^\(\%([^"]\|\"\"\)\{-}\)"\([^"].*$\|$\)','\1','')
+	let pat  = substitute(pat,'""','"','g')
+    let expr = substitute(expr,'^\(\%([^"]\|\"\"\)\{-}\)"\([^"].*$\|$\)','\2','')
+    let expr = substitute(expr,'^\s*','','')
+"    call Decho("pat<".pat."> expr<".expr.">")
+
+    call s:LP_PatPush('.*'.pat.'.*')
 
    elseif expr =~ '^[!()|&]'
-   	" push an operator
-   	let op   = strpart(expr,0,1)
-   	let expr = strpart(expr,strlen(op))
-	call s:LP_OpPush(op)
+    " push an operator
+    let op   = strpart(expr,0,1)
+    let expr = strpart(expr,strlen(op))
+	" allow for those who can't resist doubling their and/or operators
+	if op =~ '[|&]' && expr[0] == op
+     let expr = strpart(expr,strlen(op))
+	endif
+    call s:LP_OpPush(op)
 
    elseif expr =~ '^\s'
-   	" skip whitespace
-   	let expr= strpart(expr,1)
+    " skip whitespace
+    let expr= strpart(expr,1)
 
    else
-   	echoerr "operator<".strpart(expr,0,1)."> not supported (yet)"
-   	let expr= strpart(expr,1)
+    echoerr "operator<".strpart(expr,0,1)."> not supported (yet)"
+    let expr= strpart(expr,1)
    endif
 
   endwhile
@@ -136,6 +139,12 @@ fun! LogiPat(pat,...)
 "  call Dret("LogiPat ".result)
   return result
 endfun
+
+" ---------------------------------------------------------------------
+" s:String: Vim6.4 doesn't have string() {{{2
+func! s:String(str)
+  return "'".escape(a:str, '"')."'"
+endfunc
 
 " ---------------------------------------------------------------------
 " LP_PatPush: {{{2
@@ -191,29 +200,30 @@ fun! s:LP_OpPush(op)
    echoerr "expr<".expr."> not supported (yet)"
    let preclvl= s:preclvl
   endif
+"  call Decho("new operator<".a:op."> preclvl=".preclvl)
 
   " execute higher-precdence operators
+"  call Decho("execute higher-precedence operators")
   call s:LP_Execute(preclvl)
 
   " push new operator onto operator-stack
+"  call Decho("push new operator<".a:op."> onto stack with preclvl=".preclvl." at nopstack=".(s:nopstack+1))
   if a:op =~ '!'
    let s:nopstack             = s:nopstack + 1
    let s:opprec_{s:nopstack}  = preclvl
    let s:opstack_{s:nopstack} = a:op
   elseif a:op =~ '|'
-   let preclvl= s:preclvl + 1
    let s:nopstack             = s:nopstack + 1
    let s:opprec_{s:nopstack}  = preclvl
    let s:opstack_{s:nopstack} = a:op
   elseif a:op == '&'
-   let preclvl= s:preclvl + 2
    let s:nopstack             = s:nopstack + 1
    let s:opprec_{s:nopstack}  = preclvl
    let s:opstack_{s:nopstack} = a:op
   endif
 
 "  call s:StackLook("oppush") "Decho
-"  call Dret("LP_OpPush")
+"  call Dret("LP_OpPush : s:preclvl=".s:preclvl)
 endfun
 
 " ---------------------------------------------------------------------
@@ -267,7 +277,7 @@ endfun
 " LP_Or: writes a logical-or branch using two patterns {{{2
 fun! s:LP_Or(pat1,pat2)
 "  call Dfunc("LP_Or(pat1<".a:pat1."> pat2<".a:pat2.">)")
-  let ret= a:pat1.'\|'.a:pat2
+  let ret= '\%('.a:pat1.'\|'.a:pat2.'\)'
 "  call Dret("LP_Or ".ret)
   return ret
 endfun
@@ -323,170 +333,3 @@ endfun
 let &cpo= s:keepcpo
 unlet s:keepcpo
 " vim: ts=4 fdm=marker
-" HelpExtractor:
-"  Author:	Charles E. Campbell, Jr.
-"  Version:	3
-"  Date:	May 25, 2005
-"
-"  History:
-"    v3 May 25, 2005 : requires placement of code in plugin directory
-"                      cpo is standardized during extraction
-"    v2 Nov 24, 2003 : On Linux/Unix, will make a document directory
-"                      if it doesn't exist yet
-"
-" GetLatestVimScripts: 748 1 HelpExtractor.vim
-" ---------------------------------------------------------------------
-set lz
-let s:HelpExtractor_keepcpo= &cpo
-set cpo&vim
-let docdir = expand("<sfile>:r").".txt"
-if docdir =~ '\<plugin\>'
- let docdir = substitute(docdir,'\<plugin[/\\].*$','doc','')
-else
- if has("win32")
-  echoerr expand("<sfile>:t").' should first be placed in your vimfiles\plugin directory'
- else
-  echoerr expand("<sfile>:t").' should first be placed in your .vim/plugin directory'
- endif
- finish
-endif
-if !isdirectory(docdir)
- if has("win32")
-  echoerr 'Please make '.docdir.' directory first'
-  unlet docdir
-  finish
- elseif !has("mac")
-  exe "!mkdir ".docdir
- endif
-endif
-
-let curfile = expand("<sfile>:t:r")
-let docfile = substitute(expand("<sfile>:r").".txt",'\<plugin\>','doc','')
-exe "silent! 1new ".docfile
-silent! %d
-exe "silent! 0r ".expand("<sfile>:p")
-silent! 1,/^" HelpExtractorDoc:$/d
-exe 'silent! %s/%FILE%/'.curfile.'/ge'
-exe 'silent! %s/%DATE%/'.strftime("%b %d, %Y").'/ge'
-norm! Gdd
-silent! wq!
-exe "helptags ".substitute(docfile,'^\(.*doc.\).*$','\1','e')
-
-exe "silent! 1new ".expand("<sfile>:p")
-1
-silent! /^" HelpExtractor:$/,$g/.*/d
-silent! wq!
-
-set nolz
-unlet docdir
-unlet curfile
-"unlet docfile
-let &cpo= s:HelpExtractor_keepcpo
-unlet s:HelpExtractor_keepcpo
-finish
-
-" ---------------------------------------------------------------------
-" Put the help after the HelpExtractorDoc label...
-" HelpExtractorDoc:
-*logipat.txt*	Logical Patterns				Aug 09, 2005
-
-Author:  Charles E. Campbell, Jr.  <NdrOchip@ScampbellPfamily.AbizM>
-Copyright: (c) 2004-2005 by Charles E. Campbell, Jr.	*logipat-copyright*
-           The VIM LICENSE applies to LogiPat.vim and LogiPat.txt
-           (see |copyright|) except use "LogiPat" instead of "Vim"
-	   No warranty, express or implied.  Use At-Your-Own-Risk.
-
-==============================================================================
-1. Contents							*logipat*
-
-	1. Contents.................: |logipat-contents|
-	2. LogiPat Manual...........: |logipat-manual|
-	3. LogiPat Examples.........: |logipat-examples|
-	4. Caveat...................: |logipat-caveat|
-	5. LogiPat History..........: |logipat-history|
-
-==============================================================================
-2. LogiPat Manual			*logipat-manual* *logipat-man*
-
-
-	*logipat-arg* *logipat-input* *logipat-pattern* *logipat-operators*
-	Boolean logic patterns are composed of
-
-			operators	! = not
-					| = logical-or
-					& = logical-and
-			grouping	( ... )
-			patterns	"pattern"
-
-	:LogiPat {boolean-logic pattern}		*:LogiPat*
-		:LogiPat is a command which takes a boolean-logic
-		argument (|logipat-arg|).
-
-	:LP {boolean-logic pattern}			*:LP*
-		:LP is a shorthand command version of :LogiPat
-		(|logipat-cmd|).
-
-	:LogiPatFlags {search flags}			*LogiPat-flags*
-		:LogiPatFlags {search flags}
-		LogiPat uses the |search()| command.  The flags
-		passed to that call to search() may be specified
-		by the :LogiPatFlags command.
-
-	:LPF {search flags}				*:LPF*
-		:LPF is a shorthand version of :LogiPatFlags.
-
-	:let pat=LogiPat({boolean-logic pattern})	*LogiPat()*
-		If one calls LogiPat() directly, no search
-		is done, but the transformation from the boolean
-		logic pattern into a regular expression pattern
-		is performed and returned.
-
-==============================================================================
-3. LogiPat Examples					*logipat-examples*
-
-	LogiPat takes Boolean logic arguments and produces a regular
-	expression which implements the choices.  A series of examples
-	follow:
->
-	:LogiPat "abc"
-<		will search for lines containing the string "abc"
->
-	:LogiPat !"abc"
-<		will search for lines which don't contain the string "abc"
->
-	:LogiPat "abc"|"def"
-<		will search for lines which contain either the string
-		"abc" or the string "def"
->
-	:LogiPat !("abc"|"def")
-<		will search for lines which don't contain either
-		of the strings "abc" or "def"
->
-	:LogiPat "abc"&"def"
-<		will search for lines which contain both of the strings
-		"abc" and "def"
->
-	:let pat= LogiPat('!"abc"')
-<		will return the regular expression which will match
-		all lines not containing "abc".  The double quotes
-		are needed to pass normal patterns to LogiPat, and
-		differentiate such patterns from boolean logic
-		operators.
-
-
-==============================================================================
-4. Caveat						*logipat-caveat*
-
-	The "not" operator may be fragile; ie. it may not always play well
-	with the & (logical-and) and | (logical-or) operators.  Please try out
-	your patterns, possibly with :set hls, to insure that what is matching
-	is what you want.
-
-==============================================================================
-3. LogiPat History					*logipat-history*
-
-	v2 May 31, 2005	* LPF and LogiPatFlags commands weren't working
-	v1 May 23, 2005	* initial release
-
-==============================================================================
-vim:tw=78:ts=8:ft=help

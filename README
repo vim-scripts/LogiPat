@@ -20,5 +20,5 @@ LogiPat takes Boolean logic arguments and produces a regular expression which is
 :let pat= LogiPat('!"abc"')
 		will return the regular expression which will match all lines not containing "abc".  The double quotes are needed to pass normal patterns to LogiPat, and differentiate such patterns from boolean logic operators.
 
-(alpha/beta version available at http://mysite.verizon.net/astronaut/vim/index.html#LOGIPAT)
+(alpha/beta version available at http://www.drchip.org/astronaut/vim/index.html#LOGIPAT)
 
